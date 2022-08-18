@@ -1,5 +1,6 @@
 package org.uncertaintyman;
 
+import com.corundumstudio.socketio.AckCallback;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.VoidAckCallback;
 import org.slf4j.Logger;
@@ -27,18 +28,29 @@ public class HomeController {
         String sendMsg = "服务端home返回信息";
 
         socketIOServer.getAllClients().forEach(socketIOClient ->
-                        socketIOClient.sendEvent("my_response", new ServerAck(msgKey, 10000), sendMsg)
+                        socketIOClient.sendEvent("my_response", new ServerVoidAck(msgKey, 10000), sendMsg)
         );
 
         return "Hello, World";
     }
 
-    public static class ServerAck extends VoidAckCallback {
+    /**
+     * 需要客户端做对应的实现
+     *
+     * const socket = io("ws://localhost:10001");
+     * socket.on('my_response', function(msg, ack) {
+     *   console.log("msg", msg);
+     *   if(ack) {
+     *     ack();
+     *   }
+     * });
+     */
+    public static class ServerVoidAck extends VoidAckCallback {
 
         private String msgKey;
-        private final Logger logger = LoggerFactory.getLogger(ServerAck.class);
+        private final Logger logger = LoggerFactory.getLogger(ServerVoidAck.class);
 
-        public ServerAck(String msgKey, int timeout) {
+        public ServerVoidAck(String msgKey, int timeout) {
             super(timeout);
             this.msgKey = msgKey;
         }
@@ -49,4 +61,21 @@ public class HomeController {
         }
     }
 
+
+    public static class ResMsgKeyAck extends AckCallback<String> {
+
+        private String msgKey;
+        private final Logger logger = LoggerFactory.getLogger(ServerVoidAck.class);
+
+        public ResMsgKeyAck(String msgKey, int timeout) {
+            super(String.class, timeout);
+            this.msgKey = msgKey;
+        }
+
+        @Override
+        public void onSuccess(String result) {
+            logger.info("sendMsgSuccess|msgKey:{}|result:{}", msgKey, result);
+
+        }
+    }
 }
