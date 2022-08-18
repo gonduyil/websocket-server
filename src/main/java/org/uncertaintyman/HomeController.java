@@ -9,6 +9,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.UUID;
+
 @Controller
 public class HomeController {
 
@@ -21,21 +23,30 @@ public class HomeController {
     @RequestMapping("/")
     public @ResponseBody String greeting() {
 
+        String msgKey = UUID.randomUUID().toString().replace("-", "");
         String sendMsg = "服务端home返回信息";
 
-        socketIOServer.getAllClients().forEach(socketIOClient -> {
-            socketIOClient.sendEvent("my_response",
-                    new VoidAckCallback(1000) {
-
-                        @Override
-                        protected void onSuccess() {
-                            logger.info("sendSuccess|sendMsg:{}", sendMsg);
-                        }
-                    },
-                    sendMsg);
-        });
+        socketIOServer.getAllClients().forEach(socketIOClient ->
+                        socketIOClient.sendEvent("my_response", new ServerAck(msgKey, 10000), sendMsg)
+        );
 
         return "Hello, World";
+    }
+
+    public static class ServerAck extends VoidAckCallback {
+
+        private String msgKey;
+        private final Logger logger = LoggerFactory.getLogger(ServerAck.class);
+
+        public ServerAck(String msgKey, int timeout) {
+            super(timeout);
+            this.msgKey = msgKey;
+        }
+
+        @Override
+        protected void onSuccess() {
+            logger.info("sendMsgSuccess|msgKey:{}", msgKey);
+        }
     }
 
 }
